@@ -268,17 +268,17 @@
         <section class="panel">
           <h2>הוספת משימה חדשה</h2>
           <form id="task-form">
-            <label>
+            <label for="title">
               שם המשימה
               <input id="title" name="title" type="text" maxlength="80" required />
             </label>
 
             <div class="field-row">
-              <label>
+              <label for="date">
                 תאריך
                 <input id="date" name="date" type="date" required />
               </label>
-              <label>
+              <label for="priority">
                 עדיפות
                 <select id="priority" name="priority">
                   <option value="גבוהה">גבוהה</option>
@@ -289,17 +289,17 @@
             </div>
 
             <div class="field-row">
-              <label>
+              <label for="startTime">
                 שעת התחלה
                 <input id="startTime" name="startTime" type="time" required />
               </label>
-              <label>
+              <label for="endTime">
                 שעת סיום
                 <input id="endTime" name="endTime" type="time" required />
               </label>
             </div>
 
-            <label>
+            <label for="notes">
               הערות
               <textarea id="notes" name="notes" placeholder="מה חשוב לזכור?"></textarea>
             </label>
@@ -530,10 +530,10 @@
                 </div>
                 ${notesMarkup}
                 <div class="item-actions">
-                  <button class="${task.done ? "ghost-btn" : "success-btn"}" type="button" data-action="toggle" data-id="${task.id}">
+                  <button class="${task.done ? "ghost-btn" : "success-btn"}" type="button" data-action="toggle" data-id="${task.id}" aria-pressed="${task.done}" aria-label="${task.done ? "החזר את המשימה לפתוחות" : "סמן את המשימה כהושלמה"}">
                     ${task.done ? "החזר לפתוחות" : "סמן כהושלמה"}
                   </button>
-                  <button class="danger-btn" type="button" data-action="delete" data-id="${task.id}">
+                  <button class="danger-btn" type="button" data-action="delete" data-id="${task.id}" aria-label="מחק את המשימה ${escapeHtml(task.title)}">
                     מחק
                   </button>
                 </div>
