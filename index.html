@@ -365,7 +365,7 @@
           return;
         }
 
-        if (task.endTime <= task.startTime) {
+        if (timeToMinutes(task.endTime) <= timeToMinutes(task.startTime)) {
           alert("שעת הסיום חייבת להיות אחרי שעת ההתחלה.");
           return;
         }
@@ -413,10 +413,13 @@
         localStorage.setItem(storageKey, JSON.stringify(tasks));
       }
 
+      function timeToMinutes(value) {
+        const [hour, minute] = value.split(":").map(Number);
+        return hour * 60 + minute;
+      }
+
       function durationInMinutes(task) {
-        const [startHour, startMinute] = task.startTime.split(":").map(Number);
-        const [endHour, endMinute] = task.endTime.split(":").map(Number);
-        return endHour * 60 + endMinute - (startHour * 60 + startMinute);
+        return timeToMinutes(task.endTime) - timeToMinutes(task.startTime);
       }
 
       function getVisibleTasks() {
@@ -473,6 +476,9 @@
         schedule.innerHTML = visibleTasks
           .map((task) => {
             const duration = durationInMinutes(task);
+            const notesMarkup = task.notes
+              ? `<p>${escapeHtml(task.notes)}</p>`
+              : '<p class="muted">ללא הערות נוספות.</p>';
 
             return `
               <article class="item">
@@ -487,11 +493,7 @@
                   <span>${task.startTime} - ${task.endTime}</span>
                   <span>${duration} דקות</span>
                 </div>
-                ${
-                  task.notes
-                    ? `<p>${escapeHtml(task.notes)}</p>`
-                    : '<p class="muted">ללא הערות נוספות.</p>'
-                }
+                ${notesMarkup}
                 <div class="item-actions">
                   <button class="${task.done ? "ghost-btn" : "success-btn"}" type="button" data-action="toggle" data-id="${task.id}">
                     ${task.done ? "החזר לפתוחות" : "סמן כהושלמה"}
