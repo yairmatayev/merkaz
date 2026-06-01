@@ -328,12 +328,12 @@
               כדי לחבר חשבון Google צריך להזין מזהה לקוח ציבורי (Client ID) של
               Google. אחרי ההתחברות, המשימות יישמרו מקומית בדפדפן לפי החשבון
               המחובר. החיבור הזה מיועד להתאמה מקומית בדפדפן בלבד, בלי אימות
-              שרת ובלי הרשאות backend.
+              שרת ובלי הרשאות צד שרת.
             </p>
           </div>
           <div class="auth-controls">
             <label for="google-client-id">
-              Google Client ID
+              מזהה לקוח של Google
               <div class="client-id-row">
                 <input
                   id="google-client-id"
@@ -349,6 +349,10 @@
             </label>
             <div class="form-message" id="auth-message" aria-live="polite"></div>
             <div class="auth-status" id="auth-status" aria-live="polite"></div>
+            <div class="form-message">
+              חיבור Google כאן אינו מנגנון אבטחה מלא. הוא משמש רק לשיוך מקומי של
+              משימות בדפדפן הנוכחי.
+            </div>
             <div class="actions">
               <div class="google-button-slot" id="google-signin-button"></div>
               <button class="ghost-btn hidden" type="button" id="google-signout">
@@ -595,7 +599,7 @@
             .map((task) => sanitizeTask(task))
             .filter(Boolean);
         } catch (error) {
-          console.warn("Could not load saved tasks from localStorage.", error);
+          console.warn("לא ניתן היה לטעון את המשימות מ-localStorage.", error);
           return [];
         }
       }
@@ -891,7 +895,7 @@
                 : "משתמש Google",
           };
         } catch (error) {
-          console.warn("Could not load saved Google session.", error);
+          console.warn("לא ניתן היה לטעון את פרטי החיבור השמורים של Google.", error);
           return null;
         }
       }
@@ -994,7 +998,7 @@
           const bytes = Uint8Array.from(decoded, (char) => char.charCodeAt(0));
           return JSON.parse(new TextDecoder().decode(bytes));
         } catch (error) {
-          console.warn("Could not decode Google credential.", error);
+          console.warn("לא ניתן היה לפענח את פרטי ההתחברות של Google.", error);
           return null;
         }
       }
