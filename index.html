@@ -281,7 +281,7 @@
                 name="title"
                 type="text"
                 maxlength="80"
-                pattern=".*\S.*"
+                pattern="^(?=.*\S).+$"
                 title="יש להזין שם משימה שאינו מורכב מרווחים בלבד."
                 required
               />
@@ -353,6 +353,9 @@
       const formMessage = document.getElementById("form-message");
       const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
       const today = new Date().toISOString().split("T")[0];
+      const fallbackSessionId = `${Date.now()}-${Math.floor(
+        performance.timeOrigin || 0
+      )}`;
       let fallbackIdCounter = 0;
       let activeFilter = "all";
       let pendingClear = false;
@@ -380,6 +383,7 @@
           done: false,
           createdAt: Date.now(),
         };
+        task.sortStamp = getTaskTimestamp(task);
 
         if (!task.title) {
           setFormMessage("צריך להזין שם משימה.");
@@ -474,7 +478,7 @@
         }
 
         fallbackIdCounter += 1;
-        return `task-${Date.now()}-${fallbackIdCounter}`;
+        return `task-${fallbackSessionId}-${fallbackIdCounter}`;
       }
 
       function timeToMinutes(value) {
@@ -504,9 +508,7 @@
       }
 
       function getVisibleTasks() {
-        const sorted = [...tasks].sort(
-          (a, b) => getTaskTimestamp(a) - getTaskTimestamp(b)
-        );
+        const sorted = [...tasks].sort((a, b) => a.sortStamp - b.sortStamp);
 
         if (activeFilter === "today") {
           return sorted.filter((task) => task.date === today);
@@ -681,6 +683,7 @@
           return null;
         }
 
+        sanitizedTask.sortStamp = getTaskTimestamp(sanitizedTask);
         return sanitizedTask;
       }
 
