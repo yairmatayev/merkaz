@@ -249,6 +249,61 @@
         color: var(--danger);
       }
 
+      .hidden {
+        display: none !important;
+      }
+
+      .auth-card {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+        display: grid;
+        gap: 16px;
+      }
+
+      .auth-card h2 {
+        margin: 0 0 8px;
+        font-size: 1.2rem;
+      }
+
+      .auth-card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .auth-controls {
+        display: grid;
+        gap: 12px;
+      }
+
+      .client-id-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .client-id-row input {
+        flex: 1 1 320px;
+      }
+
+      .auth-status {
+        display: grid;
+        gap: 4px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: #f8fbff;
+        border: 1px solid var(--border);
+      }
+
+      .auth-status strong {
+        font-size: 1rem;
+      }
+
+      .google-button-slot {
+        min-height: 44px;
+      }
+
       @media (max-width: 900px) {
         .grid,
         .stats,
@@ -266,6 +321,41 @@
           אפשר להוסיף משימות לפי שעה ותאריך, לעקוב אחרי מה הושלם ולשמור הכול
           אוטומטית בדפדפן.
         </p>
+        <div class="auth-card">
+          <div>
+            <h2>חיבור Google</h2>
+            <p>
+              כדי לחבר חשבון Google צריך להזין מזהה לקוח ציבורי (Client ID) של
+              Google. אחרי ההתחברות, המשימות יישמרו מקומית בדפדפן לפי החשבון
+              המחובר.
+            </p>
+          </div>
+          <div class="auth-controls">
+            <label for="google-client-id">
+              Google Client ID
+              <div class="client-id-row">
+                <input
+                  id="google-client-id"
+                  type="text"
+                  inputmode="text"
+                  autocomplete="off"
+                  placeholder="1234567890-abc123.apps.googleusercontent.com"
+                />
+                <button class="secondary-btn" type="button" id="save-google-client-id">
+                  שמור מזהה
+                </button>
+              </div>
+            </label>
+            <div class="form-message" id="auth-message" aria-live="polite"></div>
+            <div class="auth-status" id="auth-status" aria-live="polite"></div>
+            <div class="actions">
+              <div class="google-button-slot" id="google-signin-button"></div>
+              <button class="ghost-btn hidden" type="button" id="google-signout">
+                התנתק מ-Google
+              </button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="stats" id="stats"></section>
@@ -327,7 +417,8 @@
             <div class="form-message" id="form-message" aria-live="polite"></div>
           </form>
           <div class="footer-note">
-            הנתונים נשמרים מקומית בדפדפן באמצעות localStorage.
+            הנתונים נשמרים מקומית בדפדפן באמצעות localStorage. כשמחברים Google,
+            המשימות נשמרות לפי החשבון המחובר.
           </div>
         </section>
 
@@ -344,13 +435,22 @@
       </div>
     </div>
 
+    <script src="https://accounts.google.com/gsi/client"></script>
     <script>
-      const storageKey = "time-management-app";
+      const baseStorageKey = "time-management-app";
+      const googleClientIdStorageKey = "time-management-google-client-id";
+      const googleSessionStorageKey = "time-management-google-session";
       const form = document.getElementById("task-form");
       const stats = document.getElementById("stats");
       const schedule = document.getElementById("schedule");
       const clearAllButton = document.getElementById("clear-all");
       const formMessage = document.getElementById("form-message");
+      const googleClientIdInput = document.getElementById("google-client-id");
+      const saveGoogleClientIdButton = document.getElementById("save-google-client-id");
+      const authMessage = document.getElementById("auth-message");
+      const authStatus = document.getElementById("auth-status");
+      const googleSignInButton = document.getElementById("google-signin-button");
+      const googleSignOutButton = document.getElementById("google-signout");
       const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
       const today = new Date().toISOString().split("T")[0];
       const fallbackSessionId = `${Date.now()}`;
@@ -358,11 +458,17 @@
       let fallbackIdCounter = 0;
       let activeFilter = "all";
       let pendingClear = false;
+      let googleInitializedClientId = "";
+      let googleClientId = loadGoogleClientId();
+      let googleUser = loadGoogleSession();
       let tasks = loadTasks();
 
+      googleClientIdInput.value = googleClientId;
       document.getElementById("date").value = today;
       document.getElementById("startTime").value = "09:00";
       document.getElementById("endTime").value = "10:00";
+      initializeGoogleSignIn();
+      renderAuthState();
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -443,9 +549,54 @@
         });
       });
 
+      saveGoogleClientIdButton.addEventListener("click", () => {
+        const nextClientId = googleClientIdInput.value.trim();
+
+        if (!nextClientId) {
+          googleClientId = "";
+          googleInitializedClientId = "";
+          googleUser = null;
+          localStorage.removeItem(googleClientIdStorageKey);
+          persistGoogleSession();
+          tasks = loadTasks();
+          pendingClear = false;
+          googleSignInButton.replaceChildren();
+          setAuthMessage("מזהה הלקוח הוסר.");
+          renderAuthState();
+          render();
+          return;
+        }
+
+        if (!isValidGoogleClientId(nextClientId)) {
+          setAuthMessage("יש להזין Google Client ID תקין.");
+          return;
+        }
+
+        googleClientId = nextClientId;
+        googleInitializedClientId = "";
+        localStorage.setItem(googleClientIdStorageKey, googleClientId);
+        setAuthMessage("מזהה הלקוח נשמר. אפשר להתחבר עם Google.");
+        initializeGoogleSignIn(true);
+      });
+
+      googleSignOutButton.addEventListener("click", () => {
+        if (window.google?.accounts?.id) {
+          window.google.accounts.id.disableAutoSelect();
+        }
+
+        googleUser = null;
+        persistGoogleSession();
+        tasks = loadTasks();
+        pendingClear = false;
+        setAuthMessage("החשבון נותק בדפדפן הזה.");
+        renderAuthState();
+        render();
+        initializeGoogleSignIn(true);
+      });
+
       function loadTasks() {
         try {
-          const storedTasks = JSON.parse(localStorage.getItem(storageKey));
+          const storedTasks = JSON.parse(localStorage.getItem(getTaskStorageKey()));
           if (!Array.isArray(storedTasks)) {
             return [];
           }
@@ -460,7 +611,7 @@
       }
 
       function persistTasks() {
-        localStorage.setItem(storageKey, JSON.stringify(tasks));
+        localStorage.setItem(getTaskStorageKey(), JSON.stringify(tasks));
       }
 
       function createId() {
@@ -595,6 +746,35 @@
         renderSchedule();
       }
 
+      function renderAuthState() {
+        const hasClientId = Boolean(googleClientId);
+        saveGoogleClientIdButton.textContent = hasClientId ? "עדכן מזהה" : "שמור מזהה";
+        googleSignOutButton.classList.toggle("hidden", !googleUser);
+        googleSignInButton.classList.toggle("hidden", !hasClientId || Boolean(googleUser));
+
+        if (!hasClientId) {
+          authStatus.innerHTML = `
+            <strong>חיבור Google עדיין לא הוגדר</strong>
+            <span>יש להזין Client ID ציבורי של Google כדי להציג כפתור התחברות.</span>
+          `;
+          return;
+        }
+
+        if (!googleUser) {
+          authStatus.innerHTML = `
+            <strong>החיבור מוכן</strong>
+            <span>אחרי ההתחברות, המשימות יישמרו בדפדפן עבור החשבון המחובר.</span>
+          `;
+          return;
+        }
+
+        authStatus.innerHTML = `
+          <strong>מחובר כ-${escapeHtml(googleUser.name || "משתמש Google")}</strong>
+          <span>${escapeHtml(googleUser.email)}</span>
+          <span>המשימות נשמרות מקומית בדפדפן עבור החשבון הזה.</span>
+        `;
+      }
+
       function renderToggleButton(task) {
         const buttonClass = task.done ? "ghost-btn" : "success-btn";
         const buttonLabel = task.done ? "החזר לפתוחות" : "סמן כהושלמה";
@@ -628,6 +808,10 @@
         const div = document.createElement("div");
         div.textContent = String(value ?? "");
         return div.innerHTML;
+      }
+
+      function setAuthMessage(message) {
+        authMessage.textContent = message;
       }
 
       function setFormMessage(message) {
@@ -685,6 +869,131 @@
 
         sanitizedTask.sortStamp = getTaskTimestamp(sanitizedTask);
         return sanitizedTask;
+      }
+
+      function getTaskStorageKey() {
+        const email = googleUser?.email?.trim().toLowerCase();
+        return email ? `${baseStorageKey}:${email}` : baseStorageKey;
+      }
+
+      function loadGoogleClientId() {
+        const storedClientId = localStorage.getItem(googleClientIdStorageKey);
+        return typeof storedClientId === "string" ? storedClientId.trim() : "";
+      }
+
+      function loadGoogleSession() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(googleSessionStorageKey));
+          if (!parsed || typeof parsed !== "object") {
+            return null;
+          }
+
+          if (typeof parsed.email !== "string" || !parsed.email.trim()) {
+            return null;
+          }
+
+          return {
+            email: parsed.email.trim().toLowerCase(),
+            name:
+              typeof parsed.name === "string" && parsed.name.trim()
+                ? parsed.name.trim()
+                : "משתמש Google",
+          };
+        } catch (error) {
+          console.warn("Could not load saved Google session.", error);
+          return null;
+        }
+      }
+
+      function persistGoogleSession() {
+        if (!googleUser) {
+          localStorage.removeItem(googleSessionStorageKey);
+          return;
+        }
+
+        localStorage.setItem(googleSessionStorageKey, JSON.stringify(googleUser));
+      }
+
+      function isValidGoogleClientId(value) {
+        return /^[a-zA-Z0-9-]+\.apps\.googleusercontent\.com$/.test(value);
+      }
+
+      function initializeGoogleSignIn(forceRender = false) {
+        renderAuthState();
+        if (!googleClientId || !window.google?.accounts?.id) {
+          return;
+        }
+
+        if (googleInitializedClientId !== googleClientId) {
+          window.google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleGoogleCredentialResponse,
+            ux_mode: "popup",
+            auto_select: false,
+          });
+          googleInitializedClientId = googleClientId;
+        }
+
+        if (!googleUser || forceRender) {
+          googleSignInButton.replaceChildren();
+        }
+
+        if (!googleUser) {
+          window.google.accounts.id.renderButton(googleSignInButton, {
+            theme: "outline",
+            size: "large",
+            text: "signin_with",
+            shape: "pill",
+            locale: "he",
+            width: 280,
+          });
+        }
+
+        renderAuthState();
+      }
+
+      function handleGoogleCredentialResponse(response) {
+        const payload = parseGoogleCredential(response?.credential);
+        if (!payload?.email) {
+          setAuthMessage("Google לא החזיר פרטי משתמש תקינים.");
+          return;
+        }
+
+        googleUser = {
+          email: payload.email.trim().toLowerCase(),
+          name:
+            typeof payload.name === "string" && payload.name.trim()
+              ? payload.name.trim()
+              : "משתמש Google",
+        };
+        persistGoogleSession();
+        tasks = loadTasks();
+        pendingClear = false;
+        setAuthMessage(`התחברת בהצלחה כ-${googleUser.email}.`);
+        renderAuthState();
+        render();
+      }
+
+      function parseGoogleCredential(credential) {
+        if (typeof credential !== "string") {
+          return null;
+        }
+
+        const parts = credential.split(".");
+        if (parts.length < 2) {
+          return null;
+        }
+
+        try {
+          const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+          const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+          const decoded = atob(padded);
+          const bytes = Uint8Array.from(decoded, (char) => char.charCodeAt(0));
+          return JSON.parse(new TextDecoder().decode(bytes));
+        } catch (error) {
+          console.warn("Could not decode Google credential.", error);
+          return null;
+        }
       }
 
       schedule.addEventListener("click", (event) => {
