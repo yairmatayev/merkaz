@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ניהול זמנים</title>
+    <title>מערכת לניהול זמנים</title>
     <style>
       :root {
         color-scheme: light;
@@ -243,6 +243,12 @@
         font-size: 0.9rem;
       }
 
+      .form-message {
+        min-height: 24px;
+        font-size: 0.92rem;
+        color: var(--danger);
+      }
+
       @media (max-width: 900px) {
         .grid,
         .stats,
@@ -255,7 +261,7 @@
   <body>
     <div class="container">
       <section class="hero">
-        <h1>אפליקציה לניהול זמנים</h1>
+        <h1>מערכת לניהול זמנים</h1>
         <p>
           אפשר להוסיף משימות לפי שעה ותאריך, לעקוב אחרי מה הושלם ולשמור הכול
           אוטומטית בדפדפן.
@@ -270,7 +276,15 @@
           <form id="task-form">
             <label for="title">
               שם המשימה
-              <input id="title" name="title" type="text" maxlength="80" required />
+              <input
+                id="title"
+                name="title"
+                type="text"
+                maxlength="80"
+                pattern=".*\S.*"
+                title="יש להזין שם משימה שאינו מורכב מרווחים בלבד."
+                required
+              />
             </label>
 
             <div class="field-row">
@@ -310,6 +324,7 @@
                 נקה את כל המשימות
               </button>
             </div>
+            <div class="form-message" id="form-message" aria-live="polite"></div>
           </form>
           <div class="footer-note">
             הנתונים נשמרים מקומית בדפדפן באמצעות localStorage.
@@ -335,9 +350,11 @@
       const stats = document.getElementById("stats");
       const schedule = document.getElementById("schedule");
       const clearAllButton = document.getElementById("clear-all");
+      const formMessage = document.getElementById("form-message");
       const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
       const today = new Date().toISOString().split("T")[0];
       let activeFilter = "all";
+      let pendingClear = false;
       let tasks = loadTasks();
 
       document.getElementById("date").value = today;
@@ -350,6 +367,7 @@
         const formData = new FormData(form);
         const startTime = formData.get("startTime");
         const endTime = formData.get("endTime");
+        setFormMessage("");
         const task = {
           id: createId(),
           title: formData.get("title").trim(),
@@ -363,7 +381,7 @@
         };
 
         if (!task.title) {
-          alert("צריך להזין שם משימה.");
+          setFormMessage("צריך להזין שם משימה.");
           return;
         }
 
@@ -371,17 +389,19 @@
         const endMinutes = timeToMinutes(task.endTime);
 
         if (startMinutes === null || endMinutes === null) {
-          alert("צריך להזין שעות תקינות.");
+          setFormMessage("צריך להזין שעות תקינות.");
           return;
         }
 
         if (endMinutes <= startMinutes) {
-          alert("שעת הסיום חייבת להיות אחרי שעת ההתחלה.");
+          setFormMessage("שעת הסיום חייבת להיות אחרי שעת ההתחלה.");
           return;
         }
 
         tasks.unshift(task);
         persistTasks();
+        pendingClear = false;
+        updateClearAllButton();
         form.reset();
         document.getElementById("date").value = today;
         document.getElementById("startTime").value = "09:00";
@@ -395,11 +415,19 @@
           return;
         }
 
-        if (confirm("למחוק את כל המשימות השמורות?")) {
-          tasks = [];
-          persistTasks();
-          render();
+        if (!pendingClear) {
+          pendingClear = true;
+          updateClearAllButton();
+          setFormMessage("לחץ שוב על הכפתור כדי למחוק את כל המשימות.");
+          return;
         }
+
+        tasks = [];
+        pendingClear = false;
+        updateClearAllButton();
+        setFormMessage("");
+        persistTasks();
+        render();
       });
 
       filterButtons.forEach((button) => {
@@ -428,7 +456,16 @@
           return window.crypto.randomUUID();
         }
 
-        return `task-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        if (window.crypto?.getRandomValues) {
+          const bytes = new Uint8Array(16);
+          window.crypto.getRandomValues(bytes);
+          const randomPart = Array.from(bytes, (byte) =>
+            byte.toString(16).padStart(2, "0")
+          ).join("");
+          return `task-${Date.now()}-${randomPart}`;
+        }
+
+        return `task-${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
       }
 
       function timeToMinutes(value) {
@@ -514,6 +551,8 @@
             const notesMarkup = task.notes
               ? `<p>${escapeHtml(task.notes)}</p>`
               : '<p class="muted">ללא הערות נוספות.</p>';
+            const toggleButtonMarkup = renderToggleButton(task);
+            const deleteButtonMarkup = renderDeleteButton(task);
 
             return `
               <article class="item">
@@ -530,12 +569,8 @@
                 </div>
                 ${notesMarkup}
                 <div class="item-actions">
-                  <button class="${task.done ? "ghost-btn" : "success-btn"}" type="button" data-action="toggle" data-id="${task.id}" aria-pressed="${task.done}" aria-label="${task.done ? "החזר את המשימה לפתוחות" : "סמן את המשימה כהושלמה"}">
-                    ${task.done ? "החזר לפתוחות" : "סמן כהושלמה"}
-                  </button>
-                  <button class="danger-btn" type="button" data-action="delete" data-id="${task.id}" aria-label="מחק את המשימה ${escapeHtml(task.title)}">
-                    מחק
-                  </button>
+                  ${toggleButtonMarkup}
+                  ${deleteButtonMarkup}
                 </div>
               </article>
             `;
@@ -544,8 +579,23 @@
       }
 
       function render() {
+        updateClearAllButton();
         renderStats();
         renderSchedule();
+      }
+
+      function renderToggleButton(task) {
+        const buttonClass = task.done ? "ghost-btn" : "success-btn";
+        const buttonLabel = task.done ? "החזר לפתוחות" : "סמן כהושלמה";
+        const ariaLabel = task.done
+          ? "החזר את המשימה לפתוחות"
+          : "סמן את המשימה כהושלמה";
+
+        return `<button class="${buttonClass}" type="button" data-action="toggle" data-id="${task.id}" aria-pressed="${task.done}" aria-label="${ariaLabel}">${buttonLabel}</button>`;
+      }
+
+      function renderDeleteButton(task) {
+        return `<button class="danger-btn" type="button" data-action="delete" data-id="${task.id}" aria-label="מחק את המשימה ${escapeHtml(task.title)}">מחק</button>`;
       }
 
       function getTaskTimestamp(task) {
@@ -565,6 +615,16 @@
         const div = document.createElement("div");
         div.textContent = String(value ?? "");
         return div.innerHTML;
+      }
+
+      function setFormMessage(message) {
+        formMessage.textContent = message;
+      }
+
+      function updateClearAllButton() {
+        clearAllButton.textContent = pendingClear
+          ? "לחץ שוב כדי למחוק הכול"
+          : "נקה את כל המשימות";
       }
 
       schedule.addEventListener("click", (event) => {
