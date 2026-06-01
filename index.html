@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>מערכת לניהול זמנים</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f6fb;
+        --card: #ffffff;
+        --primary: #2563eb;
+        --primary-soft: #dbeafe;
+        --success: #16a34a;
+        --danger: #dc2626;
+        --text: #0f172a;
+        --muted: #64748b;
+        --border: #dbe3ef;
+        --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 100%);
+        color: var(--text);
+      }
+
+      .container {
+        width: min(1100px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 48px;
+      }
+
+      .hero {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: var(--shadow);
+        margin-bottom: 24px;
+      }
+
+      .hero h1 {
+        margin: 0 0 8px;
+        font-size: clamp(2rem, 4vw, 3rem);
+      }
+
+      .hero p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 24px;
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+      }
+
+      .panel h2 {
+        margin-top: 0;
+        margin-bottom: 18px;
+        font-size: 1.35rem;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .stat {
+        padding: 18px;
+        background: #f8fbff;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 1.8rem;
+        margin-bottom: 4px;
+      }
+
+      .stat span {
+        color: var(--muted);
+      }
+
+      form {
+        display: grid;
+        gap: 14px;
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+      }
+
+      label {
+        display: grid;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        font: inherit;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 12px 14px;
+        background: #fff;
+      }
+
+      textarea {
+        min-height: 92px;
+        resize: vertical;
+      }
+
+      .actions,
+      .filters {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        cursor: pointer;
+      }
+
+      .primary-btn {
+        background: var(--primary);
+        color: #fff;
+      }
+
+      .secondary-btn {
+        background: var(--primary-soft);
+        color: var(--primary);
+      }
+
+      .ghost-btn {
+        background: #eef2ff;
+        color: var(--text);
+      }
+
+      .ghost-btn.active {
+        background: var(--text);
+        color: #fff;
+      }
+
+      .schedule {
+        display: grid;
+        gap: 14px;
+      }
+
+      .item {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 16px;
+        background: #fff;
+      }
+
+      .item-header,
+      .item-meta,
+      .item-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .item-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .badge {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--primary-soft);
+        color: var(--primary);
+        font-size: 0.85rem;
+        font-weight: 700;
+      }
+
+      .done {
+        background: #dcfce7;
+        color: var(--success);
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .empty {
+        padding: 24px;
+        text-align: center;
+        border: 1px dashed var(--border);
+        border-radius: 18px;
+        color: var(--muted);
+      }
+
+      .danger-btn {
+        background: #fee2e2;
+        color: var(--danger);
+      }
+
+      .success-btn {
+        background: #dcfce7;
+        color: var(--success);
+      }
+
+      .footer-note {
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .form-message {
+        min-height: 24px;
+        font-size: 0.92rem;
+        color: var(--danger);
+      }
+
+      @media (max-width: 900px) {
+        .grid,
+        .stats,
+        .field-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <section class="hero">
+        <h1>מערכת לניהול זמנים</h1>
+        <p>
+          אפשר להוסיף משימות לפי שעה ותאריך, לעקוב אחרי מה הושלם ולשמור הכול
+          אוטומטית בדפדפן.
+        </p>
+      </section>
+
+      <section class="stats" id="stats"></section>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>הוספת משימה חדשה</h2>
+          <form id="task-form">
+            <label for="title">
+              שם המשימה
+              <input
+                id="title"
+                name="title"
+                type="text"
+                maxlength="80"
+                pattern="^(?=.*\S).+$"
+                title="יש להזין שם משימה שאינו מורכב מרווחים בלבד."
+                required
+              />
+            </label>
+
+            <div class="field-row">
+              <label for="date">
+                תאריך
+                <input id="date" name="date" type="date" required />
+              </label>
+              <label for="priority">
+                עדיפות
+                <select id="priority" name="priority">
+                  <option value="גבוהה">גבוהה</option>
+                  <option value="בינונית" selected>בינונית</option>
+                  <option value="נמוכה">נמוכה</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label for="startTime">
+                שעת התחלה
+                <input id="startTime" name="startTime" type="time" required />
+              </label>
+              <label for="endTime">
+                שעת סיום
+                <input id="endTime" name="endTime" type="time" required />
+              </label>
+            </div>
+
+            <label for="notes">
+              הערות
+              <textarea id="notes" name="notes" placeholder="מה חשוב לזכור?"></textarea>
+            </label>
+
+            <div class="actions">
+              <button class="primary-btn" type="submit">שמור משימה</button>
+              <button class="secondary-btn" type="button" id="clear-all">
+                נקה את כל המשימות
+              </button>
+            </div>
+            <div class="form-message" id="form-message" aria-live="polite"></div>
+          </form>
+          <div class="footer-note">
+            הנתונים נשמרים מקומית בדפדפן באמצעות localStorage.
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>לוח זמנים</h2>
+          <div class="filters" id="filters">
+            <button class="ghost-btn active" data-filter="all" type="button">הכול</button>
+            <button class="ghost-btn" data-filter="today" type="button">היום</button>
+            <button class="ghost-btn" data-filter="open" type="button">פתוחות</button>
+            <button class="ghost-btn" data-filter="done" type="button">הושלמו</button>
+          </div>
+          <div class="schedule" id="schedule"></div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      const storageKey = "time-management-app";
+      const form = document.getElementById("task-form");
+      const stats = document.getElementById("stats");
+      const schedule = document.getElementById("schedule");
+      const clearAllButton = document.getElementById("clear-all");
+      const formMessage = document.getElementById("form-message");
+      const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
+      const today = new Date().toISOString().split("T")[0];
+      const fallbackSessionId = `${Date.now()}`;
+      const noNotesText = "ללא הערות נוספות.";
+      let fallbackIdCounter = 0;
+      let activeFilter = "all";
+      let pendingClear = false;
+      let tasks = loadTasks();
+
+      document.getElementById("date").value = today;
+      document.getElementById("startTime").value = "09:00";
+      document.getElementById("endTime").value = "10:00";
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        const formData = new FormData(form);
+        const startTime = formData.get("startTime");
+        const endTime = formData.get("endTime");
+        setFormMessage("");
+        const task = {
+          id: createId(),
+          title: formData.get("title").trim(),
+          date: formData.get("date"),
+          startTime,
+          endTime,
+          priority: formData.get("priority"),
+          notes: formData.get("notes").trim(),
+          done: false,
+          createdAt: Date.now(),
+        };
+        task.sortStamp = getTaskTimestamp(task);
+
+        if (!task.title) {
+          setFormMessage("צריך להזין שם משימה.");
+          return;
+        }
+
+        const startMinutes = timeToMinutes(task.startTime);
+        const endMinutes = timeToMinutes(task.endTime);
+
+        if (startMinutes === null || endMinutes === null) {
+          setFormMessage("צריך להזין שעות תקינות.");
+          return;
+        }
+
+        if (endMinutes <= startMinutes) {
+          setFormMessage("שעת הסיום חייבת להיות אחרי שעת ההתחלה.");
+          return;
+        }
+
+        tasks.unshift(task);
+        persistTasks();
+        pendingClear = false;
+        updateClearAllButton();
+        form.reset();
+        document.getElementById("date").value = today;
+        document.getElementById("startTime").value = "09:00";
+        document.getElementById("endTime").value = "10:00";
+        document.getElementById("priority").value = "בינונית";
+        render();
+      });
+
+      clearAllButton.addEventListener("click", () => {
+        if (!tasks.length) {
+          return;
+        }
+
+        if (!pendingClear) {
+          pendingClear = true;
+          updateClearAllButton();
+          setFormMessage("לחץ שוב על הכפתור כדי למחוק את כל המשימות.");
+          return;
+        }
+
+        tasks = [];
+        pendingClear = false;
+        updateClearAllButton();
+        setFormMessage("");
+        persistTasks();
+        render();
+      });
+
+      filterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          activeFilter = button.dataset.filter;
+          filterButtons.forEach((item) => item.classList.remove("active"));
+          button.classList.add("active");
+          render();
+        });
+      });
+
+      function loadTasks() {
+        try {
+          const storedTasks = JSON.parse(localStorage.getItem(storageKey));
+          if (!Array.isArray(storedTasks)) {
+            return [];
+          }
+
+          return storedTasks
+            .map((task) => sanitizeTask(task))
+            .filter(Boolean);
+        } catch (error) {
+          console.warn("Could not load saved tasks from localStorage.", error);
+          return [];
+        }
+      }
+
+      function persistTasks() {
+        localStorage.setItem(storageKey, JSON.stringify(tasks));
+      }
+
+      function createId() {
+        if (window.crypto?.randomUUID) {
+          return window.crypto.randomUUID();
+        }
+
+        if (window.crypto?.getRandomValues) {
+          const bytes = new Uint8Array(16);
+          window.crypto.getRandomValues(bytes);
+          const randomPart = Array.from(bytes, (byte) =>
+            byte.toString(16).padStart(2, "0")
+          ).join("");
+          return `task-${Date.now()}-${randomPart}`;
+        }
+
+        fallbackIdCounter += 1;
+        return `task-${fallbackSessionId}-${fallbackIdCounter}`;
+      }
+
+      function timeToMinutes(value) {
+        if (typeof value !== "string" || !/^\d{2}:\d{2}$/.test(value)) {
+          return null;
+        }
+
+        const [hours, minutes] = value.split(":").map(Number);
+        if (
+          Number.isNaN(hours) ||
+          Number.isNaN(minutes) ||
+          hours < 0 ||
+          hours > 23 ||
+          minutes < 0 ||
+          minutes > 59
+        ) {
+          return null;
+        }
+
+        return hours * 60 + minutes;
+      }
+
+      function durationInMinutes(task) {
+        const start = timeToMinutes(task.startTime);
+        const end = timeToMinutes(task.endTime);
+        return start === null || end === null ? 0 : end - start;
+      }
+
+      function getVisibleTasks() {
+        const sorted = [...tasks].sort((a, b) => a.sortStamp - b.sortStamp);
+
+        if (activeFilter === "today") {
+          return sorted.filter((task) => task.date === today);
+        }
+
+        if (activeFilter === "open") {
+          return sorted.filter((task) => !task.done);
+        }
+
+        if (activeFilter === "done") {
+          return sorted.filter((task) => task.done);
+        }
+
+        return sorted;
+      }
+
+      function renderStats() {
+        const totalTasks = tasks.length;
+        const todayMinutes = tasks
+          .filter((task) => task.date === today)
+          .reduce((sum, task) => sum + durationInMinutes(task), 0);
+        const completed = tasks.filter((task) => task.done).length;
+
+        stats.innerHTML = `
+          <article class="stat">
+            <strong>${totalTasks}</strong>
+            <span>סה״כ משימות</span>
+          </article>
+          <article class="stat">
+            <strong>${todayMinutes}</strong>
+            <span>דקות מתוכננות להיום</span>
+          </article>
+          <article class="stat">
+            <strong>${completed}</strong>
+            <span>משימות שהושלמו</span>
+          </article>
+        `;
+      }
+
+      function renderSchedule() {
+        const visibleTasks = getVisibleTasks();
+
+        if (!visibleTasks.length) {
+          schedule.innerHTML = '<div class="empty">אין משימות להצגה כרגע.</div>';
+          return;
+        }
+
+        schedule.innerHTML = visibleTasks
+          .map((task) => {
+            const duration = durationInMinutes(task);
+            const notesMarkup = task.notes
+              ? `<p>${escapeHtml(task.notes)}</p>`
+              : `<p class="muted">${noNotesText}</p>`;
+            const toggleButtonMarkup = renderToggleButton(task);
+            const deleteButtonMarkup = renderDeleteButton(task);
+
+            return `
+              <article class="item">
+                <div class="item-header">
+                  <h3>${escapeHtml(task.title)}</h3>
+                  <span class="badge ${task.done ? "done" : ""}">
+                    ${task.done ? "הושלמה" : task.priority}
+                  </span>
+                </div>
+                <div class="item-meta muted">
+                  <span>${task.date}</span>
+                  <span>${task.startTime} - ${task.endTime}</span>
+                  <span>${duration} דקות</span>
+                </div>
+                ${notesMarkup}
+                <div class="item-actions">
+                  ${toggleButtonMarkup}
+                  ${deleteButtonMarkup}
+                </div>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function render() {
+        updateClearAllButton();
+        renderStats();
+        renderSchedule();
+      }
+
+      function renderToggleButton(task) {
+        const buttonClass = task.done ? "ghost-btn" : "success-btn";
+        const buttonLabel = task.done ? "החזר לפתוחות" : "סמן כהושלמה";
+        const ariaLabel = task.done
+          ? "החזר את המשימה לפתוחות"
+          : "סמן את המשימה כהושלמה";
+        const taskId = escapeHtml(task.id);
+
+        return `<button class="${buttonClass}" type="button" data-action="toggle" data-id="${taskId}" aria-pressed="${task.done}" aria-label="${ariaLabel}">${buttonLabel}</button>`;
+      }
+
+      function renderDeleteButton(task) {
+        const taskId = escapeHtml(task.id);
+        return `<button class="danger-btn" type="button" data-action="delete" data-id="${taskId}" aria-label="מחק את המשימה ${escapeHtml(task.title)}">מחק</button>`;
+      }
+
+      function getTaskTimestamp(task) {
+        const totalMinutes = timeToMinutes(task.startTime);
+        if (!task.date || totalMinutes === null) {
+          return 0;
+        }
+
+        const [year, month, day] = task.date.split("-").map(Number);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        const date = new Date(year, month - 1, day, hours, minutes, 0, 0);
+        return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+      }
+
+      function escapeHtml(value) {
+        const div = document.createElement("div");
+        div.textContent = String(value ?? "");
+        return div.innerHTML;
+      }
+
+      function setFormMessage(message) {
+        formMessage.textContent = message;
+      }
+
+      function updateClearAllButton() {
+        clearAllButton.textContent = pendingClear
+          ? "לחץ שוב כדי למחוק הכול"
+          : "נקה את כל המשימות";
+      }
+
+      function sanitizeTask(task) {
+        if (!task || typeof task !== "object") {
+          return null;
+        }
+
+        const sanitizedTask = {
+          id:
+            typeof task.id === "string" && task.id.trim()
+              ? task.id
+              : createId(),
+          title:
+            typeof task.title === "string" && task.title.trim()
+              ? task.title.trim()
+              : null,
+          date:
+            typeof task.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(task.date)
+              ? task.date
+              : today,
+          startTime:
+            typeof task.startTime === "string" ? task.startTime : "09:00",
+          endTime: typeof task.endTime === "string" ? task.endTime : "10:00",
+          priority:
+            task.priority === "גבוהה" ||
+            task.priority === "בינונית" ||
+            task.priority === "נמוכה"
+              ? task.priority
+              : "בינונית",
+          notes: typeof task.notes === "string" ? task.notes : "",
+          done: Boolean(task.done),
+          createdAt:
+            typeof task.createdAt === "number" ? task.createdAt : Date.now(),
+        };
+
+        if (
+          !sanitizedTask.title ||
+          timeToMinutes(sanitizedTask.startTime) === null ||
+          timeToMinutes(sanitizedTask.endTime) === null ||
+          timeToMinutes(sanitizedTask.endTime) <=
+            timeToMinutes(sanitizedTask.startTime)
+        ) {
+          return null;
+        }
+
+        sanitizedTask.sortStamp = getTaskTimestamp(sanitizedTask);
+        return sanitizedTask;
+      }
+
+      schedule.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) {
+          return;
+        }
+
+        const { action, id } = button.dataset;
+        const task = tasks.find((item) => item.id === id);
+        if (!task) {
+          return;
+        }
+
+        if (action === "toggle") {
+          task.done = !task.done;
+        }
+        else if (action === "delete") {
+          tasks = tasks.filter((item) => item.id !== id);
+        }
+        else {
+          return;
+        }
+
+        persistTasks();
+        render();
+      });
+
+      render();
+    </script>
+  </body>
+</html>
