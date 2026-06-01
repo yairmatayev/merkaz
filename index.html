@@ -371,7 +371,7 @@
                 name="title"
                 type="text"
                 maxlength="80"
-                pattern="^(?=.*\S).+$"
+                pattern="^.*\S.*$"
                 title="יש להזין שם משימה שאינו מורכב מרווחים בלבד."
                 required
               />
@@ -453,7 +453,7 @@
       const googleSignOutButton = document.getElementById("google-signout");
       const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
       const today = new Date().toISOString().split("T")[0];
-      const fallbackSessionId = `${Date.now()}`;
+      const fallbackTimestamp = `${Date.now()}`;
       const noNotesText = "ללא הערות נוספות.";
       let fallbackIdCounter = 0;
       let activeFilter = "all";
@@ -629,7 +629,7 @@
         }
 
         fallbackIdCounter += 1;
-        return `task-${fallbackSessionId}-${fallbackIdCounter}`;
+        return `task-${fallbackTimestamp}-${fallbackIdCounter}`;
       }
 
       function timeToMinutes(value) {
@@ -915,7 +915,7 @@
       }
 
       function isValidGoogleClientId(value) {
-        return /^[a-zA-Z0-9-]+\.apps\.googleusercontent\.com$/.test(value);
+        return /^\d+-[a-zA-Z0-9]+\.apps\.googleusercontent\.com$/.test(value);
       }
 
       function initializeGoogleSignIn(forceRender = false) {
@@ -986,7 +986,7 @@
 
         try {
           const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-          const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+          const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
           const decoded = atob(padded);
           const bytes = Uint8Array.from(decoded, (char) => char.charCodeAt(0));
           return JSON.parse(new TextDecoder().decode(bytes));
