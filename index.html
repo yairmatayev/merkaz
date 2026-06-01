@@ -1010,11 +1010,9 @@
 
         if (action === "toggle") {
           task.done = !task.done;
-        }
-        else if (action === "delete") {
+        } else if (action === "delete") {
           tasks = tasks.filter((item) => item.id !== id);
-        }
-        else {
+        } else {
           return;
         }
 
