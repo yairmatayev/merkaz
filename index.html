@@ -353,9 +353,8 @@
       const formMessage = document.getElementById("form-message");
       const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
       const today = new Date().toISOString().split("T")[0];
-      const fallbackSessionId = `${Date.now()}-${Math.floor(
-        performance.timeOrigin || 0
-      )}`;
+      const fallbackSessionId = `${Date.now()}`;
+      const noNotesText = "ללא הערות נוספות.";
       let fallbackIdCounter = 0;
       let activeFilter = "all";
       let pendingClear = false;
@@ -454,7 +453,8 @@
           return storedTasks
             .map((task) => sanitizeTask(task))
             .filter(Boolean);
-        } catch {
+        } catch (error) {
+          console.warn("Could not load saved tasks from localStorage.", error);
           return [];
         }
       }
@@ -561,7 +561,7 @@
             const duration = durationInMinutes(task);
             const notesMarkup = task.notes
               ? `<p>${escapeHtml(task.notes)}</p>`
-              : '<p class="muted">ללא הערות נוספות.</p>';
+              : `<p class="muted">${noNotesText}</p>`;
             const toggleButtonMarkup = renderToggleButton(task);
             const deleteButtonMarkup = renderDeleteButton(task);
 
@@ -702,9 +702,11 @@
         if (action === "toggle") {
           task.done = !task.done;
         }
-
-        if (action === "delete") {
+        else if (action === "delete") {
           tasks = tasks.filter((item) => item.id !== id);
+        }
+        else {
+          return;
         }
 
         persistTasks();
