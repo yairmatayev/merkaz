@@ -327,7 +327,8 @@
             <p>
               כדי לחבר חשבון Google צריך להזין מזהה לקוח ציבורי (Client ID) של
               Google. אחרי ההתחברות, המשימות יישמרו מקומית בדפדפן לפי החשבון
-              המחובר.
+              המחובר. החיבור הזה מיועד להתאמה מקומית בדפדפן בלבד, בלי אימות
+              שרת ובלי הרשאות backend.
             </p>
           </div>
           <div class="auth-controls">
@@ -760,7 +761,8 @@
         authStatus.innerHTML = `
           <strong>מחובר כ-${escapeHtml(googleUser.name || "משתמש Google")}</strong>
           <span>${escapeHtml(googleUser.email)}</span>
-          <span>המשימות נשמרות מקומית בדפדפן עבור החשבון הזה.</span>
+          <span>המשימות נשמרות מקומית בדפדפן עבור החשבון הזה בלבד.</span>
+          <span>הנתונים מהחיבור אינם מאומתים מול שרת ואינם משמשים לאבטחה.</span>
         `;
       }
 
@@ -986,6 +988,7 @@
 
         try {
           const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+          // Base64url payloads may omit 0-3 trailing "=" characters, so we restore them here.
           const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
           const decoded = atob(padded);
           const bytes = Uint8Array.from(decoded, (char) => char.charCodeAt(0));
