@@ -444,12 +444,23 @@
       function showApp(user) {
         loginOverlay.classList.add("hidden");
         appContent.classList.remove("hidden");
-        userBar.innerHTML = `
-          <img src="${escapeHtml(user.picture)}" alt="תמונת פרופיל" referrerpolicy="no-referrer" />
-          <span>שלום, ${escapeHtml(user.name)}</span>
-          <button class="signout-btn" id="signout-btn" type="button">התנתק</button>
-        `;
-        document.getElementById("signout-btn").addEventListener("click", signOut);
+
+        const img = document.createElement("img");
+        img.alt = "תמונת פרופיל";
+        img.referrerPolicy = "no-referrer";
+        img.setAttribute("src", user.picture);
+
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = `שלום, ${user.name}`;
+
+        const signoutBtn = document.createElement("button");
+        signoutBtn.className = "signout-btn";
+        signoutBtn.type = "button";
+        signoutBtn.textContent = "התנתק";
+        signoutBtn.addEventListener("click", signOut);
+
+        userBar.innerHTML = "";
+        userBar.append(img, nameSpan, signoutBtn);
       }
 
       function signOut() {
@@ -479,19 +490,35 @@
         const payload = parseJwt(response.credential);
         if (!payload) return;
 
-        const user = { name: payload.name, picture: payload.picture, sub: payload.sub };
+        const user = {
+          name: payload.name,
+          picture: payload.picture,
+          sub: payload.sub,
+          exp: payload.exp,
+        };
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
         showApp(user);
+      }
+
+      function isSessionValid(user) {
+        if (!user || !user.name) return false;
+        // If we have an expiry timestamp, check it has not passed
+        if (typeof user.exp === "number") {
+          return Math.floor(Date.now() / 1000) < user.exp;
+        }
+        return true;
       }
 
       window.addEventListener("load", () => {
         // Restore previous session
         try {
           const saved = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY));
-          if (saved && saved.name) {
+          if (isSessionValid(saved)) {
             showApp(saved);
             return;
           }
+          // Expired or invalid — clear stale data
+          localStorage.removeItem(AUTH_STORAGE_KEY);
         } catch {
           /* ignore */
         }
