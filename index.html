@@ -353,6 +353,7 @@
       const formMessage = document.getElementById("form-message");
       const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
       const today = new Date().toISOString().split("T")[0];
+      let fallbackIdCounter = 0;
       let activeFilter = "all";
       let pendingClear = false;
       let tasks = loadTasks();
@@ -441,7 +442,14 @@
 
       function loadTasks() {
         try {
-          return JSON.parse(localStorage.getItem(storageKey)) || [];
+          const storedTasks = JSON.parse(localStorage.getItem(storageKey));
+          if (!Array.isArray(storedTasks)) {
+            return [];
+          }
+
+          return storedTasks
+            .map((task) => sanitizeTask(task))
+            .filter(Boolean);
         } catch {
           return [];
         }
@@ -465,7 +473,8 @@
           return `task-${Date.now()}-${randomPart}`;
         }
 
-        return `task-${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
+        fallbackIdCounter += 1;
+        return `task-${Date.now()}-${fallbackIdCounter}`;
       }
 
       function timeToMinutes(value) {
@@ -590,12 +599,14 @@
         const ariaLabel = task.done
           ? "החזר את המשימה לפתוחות"
           : "סמן את המשימה כהושלמה";
+        const taskId = escapeHtml(task.id);
 
-        return `<button class="${buttonClass}" type="button" data-action="toggle" data-id="${task.id}" aria-pressed="${task.done}" aria-label="${ariaLabel}">${buttonLabel}</button>`;
+        return `<button class="${buttonClass}" type="button" data-action="toggle" data-id="${taskId}" aria-pressed="${task.done}" aria-label="${ariaLabel}">${buttonLabel}</button>`;
       }
 
       function renderDeleteButton(task) {
-        return `<button class="danger-btn" type="button" data-action="delete" data-id="${task.id}" aria-label="מחק את המשימה ${escapeHtml(task.title)}">מחק</button>`;
+        const taskId = escapeHtml(task.id);
+        return `<button class="danger-btn" type="button" data-action="delete" data-id="${taskId}" aria-label="מחק את המשימה ${escapeHtml(task.title)}">מחק</button>`;
       }
 
       function getTaskTimestamp(task) {
@@ -625,6 +636,52 @@
         clearAllButton.textContent = pendingClear
           ? "לחץ שוב כדי למחוק הכול"
           : "נקה את כל המשימות";
+      }
+
+      function sanitizeTask(task) {
+        if (!task || typeof task !== "object") {
+          return null;
+        }
+
+        const sanitizedTask = {
+          id:
+            typeof task.id === "string" && task.id.trim()
+              ? task.id
+              : createId(),
+          title:
+            typeof task.title === "string" && task.title.trim()
+              ? task.title.trim()
+              : null,
+          date:
+            typeof task.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(task.date)
+              ? task.date
+              : today,
+          startTime:
+            typeof task.startTime === "string" ? task.startTime : "09:00",
+          endTime: typeof task.endTime === "string" ? task.endTime : "10:00",
+          priority:
+            task.priority === "גבוהה" ||
+            task.priority === "בינונית" ||
+            task.priority === "נמוכה"
+              ? task.priority
+              : "בינונית",
+          notes: typeof task.notes === "string" ? task.notes : "",
+          done: Boolean(task.done),
+          createdAt:
+            typeof task.createdAt === "number" ? task.createdAt : Date.now(),
+        };
+
+        if (
+          !sanitizedTask.title ||
+          timeToMinutes(sanitizedTask.startTime) === null ||
+          timeToMinutes(sanitizedTask.endTime) === null ||
+          timeToMinutes(sanitizedTask.endTime) <=
+            timeToMinutes(sanitizedTask.startTime)
+        ) {
+          return null;
+        }
+
+        return sanitizedTask;
       }
 
       schedule.addEventListener("click", (event) => {
