@@ -424,7 +424,7 @@
       }
 
       function createId() {
-        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        if (window.crypto?.randomUUID) {
           return window.crypto.randomUUID();
         }
 
@@ -458,8 +458,8 @@
       }
 
       function getVisibleTasks() {
-        const sorted = [...tasks].sort((a, b) =>
-          `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`)
+        const sorted = [...tasks].sort(
+          (a, b) => getTaskTimestamp(a) - getTaskTimestamp(b)
         );
 
         if (activeFilter === "today") {
@@ -548,14 +548,26 @@
         renderSchedule();
       }
 
+      function getTaskTimestamp(task) {
+        const minutes = timeToMinutes(task.startTime);
+        if (!task.date || minutes === null) {
+          return 0;
+        }
+
+        const [year, month, day] = task.date.split("-").map(Number);
+        const date = new Date(year, month - 1, day, 0, minutes, 0, 0);
+        return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+      }
+
       function escapeHtml(value) {
-        return String(value ?? "").replace(/[&<>"']/g, (character) => {
+        return String(value ?? "").replace(/[&<>"'/]/g, (character) => {
           const entities = {
             "&": "&amp;",
             "<": "&lt;",
             ">": "&gt;",
             '"': "&quot;",
             "'": "&#39;",
+            "/": "&#47;",
           };
 
           return entities[character];
