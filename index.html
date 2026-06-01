@@ -910,7 +910,7 @@
       }
 
       function isValidGoogleClientId(value) {
-        return /^\d+-[a-zA-Z0-9-]+\.apps\.googleusercontent\.com$/.test(value);
+        return /^[a-zA-Z0-9-]+\.apps\.googleusercontent\.com$/.test(value);
       }
 
       function resetGoogleState(message) {
@@ -991,6 +991,7 @@
         }
 
         try {
+          // JWT payloads use base64url, so "-" and "_" must be normalized before atob decoding.
           const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
           // Base64url payloads may omit 0-3 trailing "=" characters, so we restore them here.
           const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
