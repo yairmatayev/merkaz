@@ -453,7 +453,6 @@
       const googleSignOutButton = document.getElementById("google-signout");
       const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
       const today = new Date().toISOString().split("T")[0];
-      const fallbackTimestamp = `${Date.now()}`;
       const noNotesText = "ללא הערות נוספות.";
       let fallbackIdCounter = 0;
       let activeFilter = "all";
@@ -555,15 +554,10 @@
         if (!nextClientId) {
           googleClientId = "";
           googleInitializedClientId = "";
-          googleUser = null;
           localStorage.removeItem(googleClientIdStorageKey);
-          persistGoogleSession();
-          tasks = loadTasks();
-          pendingClear = false;
+          resetGoogleState("מזהה הלקוח הוסר.");
           googleSignInButton.replaceChildren();
-          setAuthMessage("מזהה הלקוח הוסר.");
           renderAuthState();
-          render();
           return;
         }
 
@@ -584,13 +578,8 @@
           window.google.accounts.id.disableAutoSelect();
         }
 
-        googleUser = null;
-        persistGoogleSession();
-        tasks = loadTasks();
-        pendingClear = false;
-        setAuthMessage("החשבון נותק בדפדפן הזה.");
+        resetGoogleState("החשבון נותק בדפדפן הזה.");
         renderAuthState();
-        render();
         initializeGoogleSignIn(true);
       });
 
@@ -629,11 +618,11 @@
         }
 
         fallbackIdCounter += 1;
-        return `task-${fallbackTimestamp}-${fallbackIdCounter}`;
+        return `task-${Date.now()}-${fallbackIdCounter}`;
       }
 
       function timeToMinutes(value) {
-        if (typeof value !== "string" || !/^\d{2}:\d{2}$/.test(value)) {
+        if (typeof value !== "string" || !/^\d{1,2}:\d{2}$/.test(value)) {
           return null;
         }
 
@@ -915,7 +904,16 @@
       }
 
       function isValidGoogleClientId(value) {
-        return /^\d+-[a-zA-Z0-9]+\.apps\.googleusercontent\.com$/.test(value);
+        return /^\d+-[a-zA-Z0-9-]+\.apps\.googleusercontent\.com$/.test(value);
+      }
+
+      function resetGoogleState(message) {
+        googleUser = null;
+        persistGoogleSession();
+        tasks = loadTasks();
+        pendingClear = false;
+        setAuthMessage(message);
+        render();
       }
 
       function initializeGoogleSignIn(forceRender = false) {
@@ -953,6 +951,8 @@
       }
 
       function handleGoogleCredentialResponse(response) {
+        // This app uses the Google credential only to personalize local browser data.
+        // It does not verify the token server-side or use it to authorize backend access.
         const payload = parseGoogleCredential(response?.credential);
         if (!payload?.email) {
           setAuthMessage("Google לא החזיר פרטי משתמש תקינים.");
