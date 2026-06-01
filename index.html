@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>מערכת לניהול זמנים</title>
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async></script>
     <style>
       :root {
         color-scheme: light;
@@ -249,6 +251,77 @@
         color: var(--danger);
       }
 
+      /* ── Google login overlay ── */
+      .login-overlay {
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .login-overlay.hidden {
+        display: none;
+      }
+
+      .login-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 48px 40px;
+        box-shadow: var(--shadow);
+        text-align: center;
+        width: min(400px, calc(100% - 32px));
+      }
+
+      .login-card h2 {
+        margin: 0 0 8px;
+        font-size: 1.6rem;
+      }
+
+      .login-card p {
+        margin: 0 0 28px;
+        color: var(--muted);
+      }
+
+      /* ── User info bar ── */
+      .user-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .user-bar img {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 2px solid var(--border);
+      }
+
+      .user-bar span {
+        font-weight: 700;
+        flex: 1;
+      }
+
+      .signout-btn {
+        background: var(--primary-soft);
+        color: var(--primary);
+        border: 0;
+        border-radius: 999px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.9rem;
+      }
+
+      /* hide main content until authenticated */
+      .app-content.hidden {
+        display: none;
+      }
+
       @media (max-width: 900px) {
         .grid,
         .stats,
@@ -259,6 +332,17 @@
     </style>
   </head>
   <body>
+    <!-- Login overlay -->
+    <div class="login-overlay" id="login-overlay">
+      <div class="login-card">
+        <h2>מערכת לניהול זמנים</h2>
+        <p>התחבר עם חשבון Google כדי להמשיך</p>
+        <div id="google-signin-btn"></div>
+      </div>
+    </div>
+
+    <!-- Main app (hidden until authenticated) -->
+    <div class="app-content hidden" id="app-content">
     <div class="container">
       <section class="hero">
         <h1>מערכת לניהול זמנים</h1>
@@ -266,6 +350,7 @@
           אפשר להוסיף משימות לפי שעה ותאריך, לעקוב אחרי מה הושלם ולשמור הכול
           אוטומטית בדפדפן.
         </p>
+        <div class="user-bar" id="user-bar"></div>
       </section>
 
       <section class="stats" id="stats"></section>
@@ -343,8 +428,88 @@
         </section>
       </div>
     </div>
+    </div> <!-- end .app-content -->
 
     <script>
+      // ── Google Sign-In configuration ──────────────────────────────────────
+      // Replace the value below with your Google OAuth 2.0 Client ID.
+      // Create one at https://console.cloud.google.com/ → APIs & Services → Credentials
+      const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID";
+
+      const AUTH_STORAGE_KEY = "google-user";
+      const loginOverlay = document.getElementById("login-overlay");
+      const appContent = document.getElementById("app-content");
+      const userBar = document.getElementById("user-bar");
+
+      function showApp(user) {
+        loginOverlay.classList.add("hidden");
+        appContent.classList.remove("hidden");
+        userBar.innerHTML = `
+          <img src="${escapeHtml(user.picture)}" alt="תמונת פרופיל" referrerpolicy="no-referrer" />
+          <span>שלום, ${escapeHtml(user.name)}</span>
+          <button class="signout-btn" id="signout-btn" type="button">התנתק</button>
+        `;
+        document.getElementById("signout-btn").addEventListener("click", signOut);
+      }
+
+      function signOut() {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        google.accounts.id.disableAutoSelect();
+        appContent.classList.add("hidden");
+        loginOverlay.classList.remove("hidden");
+        userBar.innerHTML = "";
+      }
+
+      function parseJwt(token) {
+        try {
+          const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+          const json = decodeURIComponent(
+            atob(base64)
+              .split("")
+              .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
+              .join("")
+          );
+          return JSON.parse(json);
+        } catch {
+          return null;
+        }
+      }
+
+      function onGoogleCredential(response) {
+        const payload = parseJwt(response.credential);
+        if (!payload) return;
+
+        const user = { name: payload.name, picture: payload.picture, sub: payload.sub };
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+        showApp(user);
+      }
+
+      window.addEventListener("load", () => {
+        // Restore previous session
+        try {
+          const saved = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY));
+          if (saved && saved.name) {
+            showApp(saved);
+            return;
+          }
+        } catch {
+          /* ignore */
+        }
+
+        // Initialise Google Sign-In
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: onGoogleCredential,
+          auto_select: false,
+          ux_mode: "popup",
+        });
+
+        google.accounts.id.renderButton(
+          document.getElementById("google-signin-btn"),
+          { theme: "outline", size: "large", locale: "he", width: 280 }
+        );
+      });
+      // ─────────────────────────────────────────────────────────────────────
       const storageKey = "time-management-app";
       const form = document.getElementById("task-form");
       const stats = document.getElementById("stats");
