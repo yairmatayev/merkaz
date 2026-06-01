@@ -348,12 +348,14 @@
         event.preventDefault();
 
         const formData = new FormData(form);
+        const startTime = formData.get("startTime");
+        const endTime = formData.get("endTime");
         const task = {
-          id: crypto.randomUUID(),
+          id: createId(),
           title: formData.get("title").trim(),
           date: formData.get("date"),
-          startTime: formData.get("startTime"),
-          endTime: formData.get("endTime"),
+          startTime,
+          endTime,
           priority: formData.get("priority"),
           notes: formData.get("notes").trim(),
           done: false,
@@ -365,7 +367,15 @@
           return;
         }
 
-        if (timeToMinutes(task.endTime) <= timeToMinutes(task.startTime)) {
+        const startMinutes = timeToMinutes(task.startTime);
+        const endMinutes = timeToMinutes(task.endTime);
+
+        if (startMinutes === null || endMinutes === null) {
+          alert("צריך להזין שעות תקינות.");
+          return;
+        }
+
+        if (endMinutes <= startMinutes) {
           alert("שעת הסיום חייבת להיות אחרי שעת ההתחלה.");
           return;
         }
@@ -413,13 +423,38 @@
         localStorage.setItem(storageKey, JSON.stringify(tasks));
       }
 
+      function createId() {
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+          return window.crypto.randomUUID();
+        }
+
+        return `task-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
+
       function timeToMinutes(value) {
+        if (typeof value !== "string" || !/^\d{2}:\d{2}$/.test(value)) {
+          return null;
+        }
+
         const [hour, minute] = value.split(":").map(Number);
+        if (
+          Number.isNaN(hour) ||
+          Number.isNaN(minute) ||
+          hour < 0 ||
+          hour > 23 ||
+          minute < 0 ||
+          minute > 59
+        ) {
+          return null;
+        }
+
         return hour * 60 + minute;
       }
 
       function durationInMinutes(task) {
-        return timeToMinutes(task.endTime) - timeToMinutes(task.startTime);
+        const start = timeToMinutes(task.startTime);
+        const end = timeToMinutes(task.endTime);
+        return start === null || end === null ? 0 : end - start;
       }
 
       function getVisibleTasks() {
@@ -514,12 +549,17 @@
       }
 
       function escapeHtml(value) {
-        return value
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#39;");
+        return String(value ?? "").replace(/[&<>"']/g, (character) => {
+          const entities = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return entities[character];
+        });
       }
 
       schedule.addEventListener("click", (event) => {
